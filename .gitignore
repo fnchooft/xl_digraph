@@ -1,4 +1,9 @@
-/ebin/*
+deps/*
+ebin/*
+test/.eunit
+test/*.beam
+.eunit/*
+logs/*
 erl_crash.dump
 *~
 .*.swp

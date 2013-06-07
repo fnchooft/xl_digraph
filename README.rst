@@ -9,7 +9,7 @@ Installation
 
 Prerequisites
 -------------
-* erlang R14A (although this will probably work on 13B)
+* erlang R16B (although this will probably work on 13B)
   - kernel, stdlib, sasl, mnesia
 
 Compilation
@@ -46,9 +46,13 @@ Original digraph code:
 
 Copyright EricssonAB 1996-2010. All Rights Reserved.
 
-Modifications herein:
+Modifications mdiagraph:
 
 Copyright 2010 Bob.sh
+
+Modifications herein:
+
+Copyright 2013 XL59.com
 
 This code uses the Erlang Public License as originally using by digraph. Please
 find the full details of the license in the file 'EPLICENSE'.

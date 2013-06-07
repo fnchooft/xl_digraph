@@ -1,6 +1,6 @@
-{application, mdigraph,
+{application, xl_digraph,
  [{description, "This is an Mnesia implementation of the core Erlang module 'digraph' from stdlib."},
-  {vsn, "1.0"},
+  {vsn, "1.1"},
   {modules, [
 	     mdigraph,
 	     mdigraph_utils
