@@ -2,8 +2,6 @@
  [{description, "This is an Mnesia implementation of the core Erlang module 'digraph' from stdlib."},
   {vsn, "1.1"},
   {modules, [
-	     mdigraph,
-	     mdigraph_utils,
              xl_digraph,
              xl_digraph_utils
 	    ]},

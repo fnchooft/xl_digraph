@@ -16,7 +16,7 @@
 %% 
 %% %CopyrightEnd%
 %%
--module(digraph_utils).
+-module(xl_digraph_utils).
 
 %%% Operations on directed (and undirected) graphs.
 %%%
@@ -37,96 +37,99 @@
 %%
 %%  A convenient type alias
 %%
+-type vertex() :: xl_digraph:vertex().
+-type vertices() :: [xl_digraph:vertex()].
+-type xl_digraph() :: xl_digraph:xl_digraph().
 
 %%
 %%  Exported functions
 %%
 
--spec components(Digraph) -> [Component] when
-      Digraph :: digraph(),
-      Component :: [digraph:vertex()].
+-spec components(Digraph) -> Components when
+      Digraph :: xl_digraph(),
+      Components :: vertices().
 
 components(G) ->
     forest(G, fun inout/3).
 
--spec strong_components(Digraph) -> [StrongComponent] when
-      Digraph :: digraph(),
-      StrongComponent :: [digraph:vertex()].
+-spec strong_components(Digraph) -> StrongComponents when
+      Digraph :: xl_digraph(),
+      StrongComponents :: vertices().
 
 strong_components(G) ->
     forest(G, fun in/3, revpostorder(G)).
 
--spec cyclic_strong_components(Digraph) -> [StrongComponent] when
-      Digraph :: digraph(),
-      StrongComponent :: [digraph:vertex()].
+-spec cyclic_strong_components(Digraph) -> StrongComponents when
+      Digraph :: xl_digraph(),
+      StrongComponents :: vertices().
 
 cyclic_strong_components(G) ->
     remove_singletons(strong_components(G), G, []).
 
 -spec reachable(Vertices, Digraph) -> Reachable when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()],
-      Reachable :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices(),
+      Reachable :: vertices().
 
 reachable(Vs, G) when is_list(Vs) ->
     lists:append(forest(G, fun out/3, Vs, first)).
 
 -spec reachable_neighbours(Vertices, Digraph) -> Reachable when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()],
-      Reachable :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices(),
+      Reachable :: vertices().
 
 reachable_neighbours(Vs, G) when is_list(Vs) ->
     lists:append(forest(G, fun out/3, Vs, not_first)).
 
 -spec reaching(Vertices, Digraph) -> Reaching when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()],
-      Reaching :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices(),
+      Reaching :: vertices().
 
 reaching(Vs, G) when is_list(Vs) ->
     lists:append(forest(G, fun in/3, Vs, first)).
 
 -spec reaching_neighbours(Vertices, Digraph) -> Reaching when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()],
-      Reaching :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices(),
+      Reaching :: vertices().
 
 reaching_neighbours(Vs, G) when is_list(Vs) ->
     lists:append(forest(G, fun in/3, Vs, not_first)).
 
 -spec topsort(Digraph) -> Vertices | 'false' when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices().
 
 topsort(G) ->
     L = revpostorder(G),
-    case length(forest(G, fun in/3, L)) =:= length(digraph:vertices(G)) of
+    case length(forest(G, fun in/3, L)) =:= length(xl_digraph:vertices(G)) of
 	true  -> L;
 	false -> false
     end.
 
 -spec is_acyclic(Digraph) -> boolean() when
-      Digraph :: digraph().
+      Digraph :: xl_digraph().
 
 is_acyclic(G) ->
     loop_vertices(G) =:= [] andalso topsort(G) =/= false.
 
 -spec arborescence_root(Digraph) -> 'no' | {'yes', Root} when
-      Digraph :: digraph(),
-      Root :: digraph:vertex().
+      Digraph :: xl_digraph(),
+      Root :: vertex().
 
 arborescence_root(G) ->
-    case digraph:no_edges(G) =:= digraph:no_vertices(G) - 1 of
+    case xl_digraph:no_edges(G) =:= xl_digraph:no_vertices(G) - 1 of
         true ->
             try
                 F = fun(V, Z) ->
-                            case digraph:in_degree(G, V) of
+                            case xl_digraph:in_degree(G, V) of
                                 1 -> Z;
                                 0 when Z =:= [] -> [V]
                             end
                     end,
-                [Root] = lists:foldl(F, [], digraph:vertices(G)),
+                [Root] = lists:foldl(F, [], xl_digraph:vertices(G)),
                 {yes, Root}
             catch _:_ ->
                 no
@@ -136,29 +139,29 @@ arborescence_root(G) ->
     end.
 
 -spec is_arborescence(Digraph) -> boolean() when
-      Digraph :: digraph().
+      Digraph :: xl_digraph().
 
 is_arborescence(G) ->
     arborescence_root(G) =/= no.
 
 -spec is_tree(Digraph) -> boolean() when
-      Digraph :: digraph().
+      Digraph :: xl_digraph().
 
 is_tree(G) ->
-    (digraph:no_edges(G) =:= digraph:no_vertices(G) - 1)
+    (xl_digraph:no_edges(G) =:= xl_digraph:no_vertices(G) - 1)
     andalso (length(components(G)) =:= 1).
 
 -spec loop_vertices(Digraph) -> Vertices when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices().
 
 loop_vertices(G) ->
-    [V || V <- digraph:vertices(G), is_reflexive_vertex(V, G)].
+    [V || V <- xl_digraph:vertices(G), is_reflexive_vertex(V, G)].
 
 -spec subgraph(Digraph, Vertices) -> SubGraph when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()],
-      SubGraph :: digraph().
+      Digraph :: xl_digraph(),
+      Vertices :: vertices(),
+      SubGraph :: xl_digraph().
 
 subgraph(G, Vs) ->
     try
@@ -169,11 +172,11 @@ subgraph(G, Vs) ->
     end.
 
 -spec subgraph(Digraph, Vertices, Options) -> SubGraph when
-      Digraph :: digraph(),
-      SubGraph :: digraph(),
-      Vertices :: [digraph:vertex()],
+      Digraph :: xl_digraph(),
+      SubGraph :: xl_digraph(),
+      Vertices :: vertices(),
       Options :: [{'type', SubgraphType} | {'keep_labels', boolean()}],
-      SubgraphType :: 'inherit' | [digraph:d_type()].
+      SubgraphType :: 'inherit' | [xl_digraph:d_type()].
 
 subgraph(G, Vs, Opts) ->
     try
@@ -184,8 +187,8 @@ subgraph(G, Vs, Opts) ->
     end.
 
 -spec condensation(Digraph) -> CondensedDigraph when
-      Digraph :: digraph(),
-      CondensedDigraph :: digraph().
+      Digraph :: xl_digraph(),
+      CondensedDigraph :: xl_digraph().
 
 condensation(G) ->
     SCs = strong_components(G),
@@ -209,15 +212,15 @@ condensation(G) ->
     SCG.
 
 -spec preorder(Digraph) -> Vertices when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices().
 
 preorder(G) ->
     lists:reverse(revpreorder(G)).
 
 -spec postorder(Digraph) -> Vertices when
-      Digraph :: digraph(),
-      Vertices :: [digraph:vertex()].
+      Digraph :: xl_digraph(),
+      Vertices :: vertices().
 
 postorder(G) ->
     lists:reverse(revpostorder(G)).
@@ -227,7 +230,7 @@ postorder(G) ->
 %%
 
 forest(G, SF) ->
-    forest(G, SF, digraph:vertices(G)).
+    forest(G, SF, xl_digraph:vertices(G)).
 
 forest(G, SF, Vs) ->
     forest(G, SF, Vs, first).
@@ -265,7 +268,7 @@ revpreorder(G) ->
 
 revpostorder(G) ->
     T = ets:new(forest, [set]),
-    L = posttraverse(digraph:vertices(G), G, T, []),
+    L = posttraverse(xl_digraph:vertices(G), G, T, []),
     ets:delete(T),
     L.
 
@@ -282,10 +285,10 @@ posttraverse([], _G, _T, L) ->
     L.
 
 in(G, V, Vs) ->
-    digraph:in_neighbours(G, V) ++ Vs.
+    xl_digraph:in_neighbours(G, V) ++ Vs.
 
 out(G, V, Vs) ->
-    digraph:out_neighbours(G, V) ++ Vs.
+    xl_digraph:out_neighbours(G, V) ++ Vs.
 
 inout(G, V, Vs) ->
     in(G, V, out(G, V, Vs)).
@@ -301,7 +304,7 @@ remove_singletons([], _G, L) ->
     L.
 
 is_reflexive_vertex(V, G) ->
-    lists:member(V, digraph:out_neighbours(G, V)).
+    lists:member(V, xl_digraph:out_neighbours(G, V)).
 
 subgraph_opts(G, Vs, Opts) ->
     subgraph_opts(Opts, inherit, true, G, Vs).
@@ -313,7 +316,7 @@ subgraph_opts([{keep_labels, Keep} | Opts], Type, _Keep0, G, Vs)
   when is_boolean(Keep) ->
     subgraph_opts(Opts, Type, Keep, G, Vs);
 subgraph_opts([], inherit, Keep, G, Vs) ->
-    Info = digraph:info(G),
+    Info = xl_digraph:info(G),
     {_, {_, Cyclicity}} = lists:keysearch(cyclicity, 1, Info),
     {_, {_, Protection}} = lists:keysearch(protection, 1, Info),
     subgraph(G, Vs, [Cyclicity, Protection], Keep);
@@ -323,15 +326,15 @@ subgraph_opts(_, _Type, _Keep, _G, _Vs) ->
     throw(badarg).
 
 subgraph(G, Vs, Type, Keep) ->
-    try digraph:new(Type) of
+    try xl_digraph:new(Type) of
 	SG ->
 	    lists:foreach(fun(V) -> subgraph_vertex(V, G, SG, Keep) end, Vs),
 	    EFun = fun(V) -> lists:foreach(fun(E) -> 
 					       subgraph_edge(E, G, SG, Keep) 
                                            end,
-                                           digraph:out_edges(G, V))
+                                           xl_digraph:out_edges(G, V))
 		   end,
-	    lists:foreach(EFun, digraph:vertices(SG)),
+	    lists:foreach(EFun, xl_digraph:vertices(SG)),
 	    SG
     catch
 	error:badarg ->
@@ -339,18 +342,18 @@ subgraph(G, Vs, Type, Keep) ->
     end.
 
 subgraph_vertex(V, G, SG, Keep) ->
-    case digraph:vertex(G, V) of
+    case xl_digraph:vertex(G, V) of
 	false -> ok;
-	_ when not Keep -> digraph:add_vertex(SG, V);
-	{_V, Label} when Keep -> digraph:add_vertex(SG, V, Label)
+	_ when not Keep -> xl_digraph:add_vertex(SG, V);
+	{_V, Label} when Keep -> xl_digraph:add_vertex(SG, V, Label)
     end.
 
 subgraph_edge(E, G, SG, Keep) ->
-    {_E, V1, V2, Label} = digraph:edge(G, E),
-    case digraph:vertex(SG, V2) of
+    {_E, V1, V2, Label} = xl_digraph:edge(G, E),
+    case xl_digraph:vertex(SG, V2) of
 	false -> ok;
-	_ when not Keep -> digraph:add_edge(SG, E, V1, V2, []);
-	_ when Keep -> digraph:add_edge(SG, E, V1, V2, Label)
+	_ when not Keep -> xl_digraph:add_edge(SG, E, V1, V2, []);
+	_ when Keep -> xl_digraph:add_edge(SG, E, V1, V2, Label)
     end.
 
 condense(SC, G, SCG, V2I, I2C) ->
@@ -359,9 +362,9 @@ condense(SC, G, SCG, V2I, I2C) ->
 		   [{_V,I}] = ets:lookup(V2I, Neighbour),
 		   ets:insert(T, {I})
 	   end,
-    VFun = fun(V) -> lists:foreach(NFun, digraph:out_neighbours(G, V)) end,
+    VFun = fun(V) -> lists:foreach(NFun, xl_digraph:out_neighbours(G, V)) end,
     lists:foreach(VFun, SC),
-    digraph:add_vertex(SCG, SC),
+    xl_digraph:add_vertex(SCG, SC),
     condense(ets:first(T), T, SC, G, SCG, I2C),
     ets:delete(T).
 
@@ -369,6 +372,6 @@ condense('$end_of_table', _T, _SC, _G, _SCG, _I2C) ->
     ok;
 condense(I, T, SC, G, SCG, I2C) ->
     [{_,C}] = ets:lookup(I2C, I),
-    digraph:add_vertex(SCG, C),
-    [digraph:add_edge(SCG, SC, C) || C =/= SC],
+    xl_digraph:add_vertex(SCG, C),
+    [xl_digraph:add_edge(SCG, SC, C) || C =/= SC],
     condense(ets:next(T, I), T, SC, G, SCG, I2C).
