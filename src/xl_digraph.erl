@@ -18,7 +18,7 @@
 %%
 -module(xl_digraph).
 
--export([new/0, new/1, new/2, delete/1, info/1]).
+-export([new/0, new/1, new/2, delete/1, info/1, info/2]).
 
 -export([add_vertex/1, add_vertex/2, add_vertex/3]).
 -export([del_vertex/2, del_vertices/2]).
@@ -71,6 +71,8 @@
 -type d_cyclicity()  :: 'acyclic' | 'cyclic'.
 -type d_type()       :: d_cyclicity() | d_protection().
 
+-define(TIMEOUT_LOAD_TABLES, 60000). % 1 minute.
+
 -spec new() -> xl_digraph().
 
 new() -> new([]).
@@ -78,32 +80,68 @@ new() -> new([]).
 -spec new(Type) -> xl_digraph() when
       Type :: [d_type()].
 new(Type) ->
-    new(get_random_string(10, "abcdef01234567890"), Type).
+    new(Type, []).
 
--spec new(string(), Type) -> xl_digraph() when
-      Type :: [d_type()].
-new(Name, Type) ->
+-spec new(Type, Options) -> xl_digraph() when
+      Type :: [d_type()],
+      Options :: [{'name', atom() | string()} |
+                  {'nodes', list()}           |
+                  {'tab_options', list()}     |
+                  {'tab_vertex', atom()}      |
+                  {'tab_edge', atom()}        |
+                  {'tab_neighbour', atom()}].
+
+new(Type, Options) ->
     case check_type(Type, protected, []) of
 	{_Access, Ts} ->
-	    V = list_to_atom("vertices-" ++ Name),
-	    E = list_to_atom("edges-" ++ Name),
-	    N = list_to_atom("neighbours-" ++ Name),
-	    mnesia:create_table(V, [{type,set}]),
-	    mnesia:create_table(E, [{type,set},
-                                    {attributes,
-                                     record_info(fields, edge)}]),
-	    mnesia:create_table(N, [{type,bag},
-                                    {attributes,
-                                     record_info(fields, neighbour)}]),
-	    Fun = fun() ->
-			  mnesia:write({N, '$vid', 0}),
-			  mnesia:write({N, '$eid', 0})
-		  end,
-	    {atomic, _} = mnesia:transaction(Fun),
-	    set_type(Ts, #xl_digraph{vtab=V, etab=E, ntab=N});
+            init(Ts, Options);
 	error ->
 	    erlang:error(badarg)
     end.
+
+init(Types, Options) ->
+    Postfix = case proplists:get_value(name, Options) of
+                  undefined ->
+                      get_random_string(10, "abcdef01234567890");
+                  Name when is_atom(Name) ->
+                      atom_to_list(Name);
+                  Name ->
+                      Name
+              end,
+    V0 = list_to_atom("vertices-" ++ Postfix),
+    E0 = list_to_atom("edges-" ++ Postfix),
+    N0 = list_to_atom("neighbours-" ++ Postfix),
+    V = proplists:get_value(tab_vertex, Options, V0),
+    E = proplists:get_value(tab_edge, Options, E0),
+    N = proplists:get_value(tab_neighbour, Options, N0),
+    TabDef = proplists:get_value(tab_options, Options, []),
+
+    case proplists:get_value(nodes, Options) of
+        undefined ->
+            ok;
+        Nodes ->
+            mnesia:create_schema(Nodes)
+    end,
+    ok = mnesia:start(),    
+    mnesia:create_table(V, [{type,set} | TabDef]),
+    mnesia:create_table(E, [{type,set},
+                            {attributes,
+                             record_info(fields, edge)}] ++ TabDef),
+    case mnesia:create_table(N, [{type,bag},
+                                 {attributes,
+                                  record_info(fields, neighbour)}] ++ TabDef) of
+        {atomic, ok} ->
+            Fun = fun() ->
+                          mnesia:write({N, '$vid', 0}),
+                          mnesia:write({N, '$eid', 0})
+                  end,
+            {atomic, _} = mnesia:transaction(Fun);
+        {aborted,{already_exists, N}} ->
+            ok
+    end,
+    ok = mnesia:wait_for_tables([V, E, N], ?TIMEOUT_LOAD_TABLES),
+
+    set_type(Types, #xl_digraph{vtab=V, etab=E, ntab=N}).
 
 %% generate a random string to be used in tables name
 -spec get_random_string(integer(), string() ) -> [].
@@ -144,7 +182,6 @@ set_type([{cyclic,V} | Ks], G) ->
     set_type(Ks, G#xl_digraph{cyclic = V});
 set_type([], G) -> G.
 
-
 %% Data access functions
 
 -spec delete(G) -> 'true' when
@@ -181,6 +218,17 @@ info(G) ->
         mnesia:table_info(ET, memory) +
         mnesia:table_info(NT, memory),
     [{cyclicity, Cyclicity}, {memory, Memory}, {protection, Protection}].
+
+-spec info(G, 'tables') -> InfoList when
+      G :: xl_digraph(),
+      InfoList :: [{'tab_vertex', atom()} |
+                   {'tab_edge', atom()}   |
+                   {'tab_neighbour', atom()}].
+
+info(G, tables) ->
+    [{tab_vertex, G#xl_digraph.vtab},
+     {tab_edge, G#xl_digraph.etab},
+     {tab_neighbour, G#xl_digraph.ntab}].
 
 -spec add_vertex(G) -> vertex() when
       G :: xl_digraph().

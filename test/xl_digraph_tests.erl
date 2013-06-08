@@ -94,7 +94,53 @@ add_delete_edge_test_() ->
 	     }
      end}.
 
+share_db_test_() ->
+    {setup, fun() -> mnesia:start(), G = xl_digraph:new(), G end, fun(_G) -> mnesia:stop() end,  
+     fun(G) ->
+             Tbls = xl_digraph:info(G, tables),
+             G1 = xl_digraph:new([], Tbls),
+	     {inorder,
+	      [
+	       ?_assertMatch("foo",          xl_digraph:add_vertex(G, "foo")),
+	       ?_assertMatch("bar",          xl_digraph:add_vertex(G1, "bar")),
+	       ?_assertMatch("next",         xl_digraph:add_vertex(G, "next")),
+	       ?_assertEqual(3,              xl_digraph:no_vertices(G)),
+	       ?_assertEqual(3,              xl_digraph:no_vertices(G1)),
+	       ?_assertMatch(['$e'|0],         xl_digraph:add_edge(G1, "foo", "bar")),
+	       ?_assertMatch(['$e'|1],         xl_digraph:add_edge(G, "foo", "next")),
+	       ?_assertEqual(2,              xl_digraph:no_edges(G)),
+	       ?_assertEqual(2,              xl_digraph:no_edges(G1)),
+	       ?_assertMatch({error, {bad_vertex, "not_exist"}}, xl_digraph:add_edge(G, "foo", "not_exist"))
+	      ]
+	     }
+     end}.
 
+persistence_test() ->
+    mnesia:delete_schema([node()]),
+    Opts = [{name, persistence_test},
+            {nodes, [node()]},
+           {tab_options, [{disc_copies, [node()]}]}],
+    G = xl_digraph:new([], Opts),
+    ?assertMatch("foo",          xl_digraph:add_vertex(G, "foo")),
+    ?assertMatch("bar",          xl_digraph:add_vertex(G, "bar")),
+    ?assertMatch("next",         xl_digraph:add_vertex(G, "next")),
+    ?assertMatch(['$e'|0],         xl_digraph:add_edge(G, "foo", "bar")),
+    ?assertMatch(['$e'|1],         xl_digraph:add_edge(G, "foo", "next")),
+    ?assertMatch({error, {bad_vertex, "not_exist"}}, xl_digraph:add_edge(G, "foo", "not_exist")),
+    %% stop mnesia
+    ?assertMatch(stopped, mnesia:stop()),
+    G1 = xl_digraph:new([], Opts),
+%    TabList = ['vertices-persistence_test',
+%               'edges-persistence_test',
+%               'neighbours-persistence_test'],
+%    mnesia:wait_for_tables(TabList, 2000),
+    ?assertMatch("reload",         xl_digraph:add_vertex(G1, "reload")),
+    ?assertEqual(4,              xl_digraph:no_vertices(G1)),
+    ?assertMatch(['$e'|_],         xl_digraph:add_edge(G1, "foo", "reload")),
+    ?assertEqual(3,              xl_digraph:no_edges(G1)),
+    mnesia:stop(), 
+    mnesia:delete_schema([node()]).
+    
 
 
 %% %% @doc source_vertices/1
