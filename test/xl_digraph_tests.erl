@@ -8,14 +8,6 @@
 -module(xl_digraph_tests).
 -include_lib("eunit/include/eunit.hrl").
 
-new_test_() ->
-    {setup, fun() -> mnesia:start() end, fun(ok) -> mnesia:stop() end,  
-     [
-      ?_assertError(badarg, xl_digraph:new([bad_type]))
-     ]
-    }.
-
-
 delete_test_() ->
     {setup, fun() -> mnesia:start(), G = xl_digraph:new(), G end, fun(_G) -> mnesia:stop() end,  
      fun(G) -> [?_assertMatch(true,  xl_digraph:delete(G))] end}.
@@ -98,7 +90,7 @@ share_db_test_() ->
     {setup, fun() -> mnesia:start(), G = xl_digraph:new(), G end, fun(_G) -> mnesia:stop() end,  
      fun(G) ->
              Tbls = xl_digraph:info(G, tables),
-             G1 = xl_digraph:new([], Tbls),
+             G1 = xl_digraph:new(Tbls),
 	     {inorder,
 	      [
 	       ?_assertMatch("foo",          xl_digraph:add_vertex(G, "foo")),
@@ -120,7 +112,7 @@ persistence_test() ->
     Opts = [{name, persistence_test},
             {nodes, [node()]},
            {tab_options, [{disc_copies, [node()]}]}],
-    G = xl_digraph:new([], Opts),
+    G = xl_digraph:new(Opts),
     ?assertMatch("foo",          xl_digraph:add_vertex(G, "foo")),
     ?assertMatch("bar",          xl_digraph:add_vertex(G, "bar")),
     ?assertMatch("next",         xl_digraph:add_vertex(G, "next")),
@@ -129,11 +121,7 @@ persistence_test() ->
     ?assertMatch({error, {bad_vertex, "not_exist"}}, xl_digraph:add_edge(G, "foo", "not_exist")),
     %% stop mnesia
     ?assertMatch(stopped, mnesia:stop()),
-    G1 = xl_digraph:new([], Opts),
-%    TabList = ['vertices-persistence_test',
-%               'edges-persistence_test',
-%               'neighbours-persistence_test'],
-%    mnesia:wait_for_tables(TabList, 2000),
+    G1 = xl_digraph:new(Opts),
     ?assertMatch("reload",         xl_digraph:add_vertex(G1, "reload")),
     ?assertEqual(4,              xl_digraph:no_vertices(G1)),
     ?assertMatch(['$e'|_],         xl_digraph:add_edge(G1, "foo", "reload")),

@@ -18,7 +18,7 @@
 %%
 -module(xl_digraph).
 
--export([new/0, new/1, new/2, delete/1, info/1, info/2]).
+-export([new/0, new/1, delete/1, info/1, info/2]).
 
 -export([add_vertex/1, add_vertex/2, add_vertex/3]).
 -export([del_vertex/2, del_vertices/2]).
@@ -77,29 +77,16 @@
 
 new() -> new([]).
 
--spec new(Type) -> xl_digraph() when
-      Type :: [d_type()].
-new(Type) ->
-    new(Type, []).
-
--spec new(Type, Options) -> xl_digraph() when
-      Type :: [d_type()],
-      Options :: [{'name', atom() | string()} |
+-spec new(Options) -> xl_digraph() when
+      Options :: [d_type()                    |
+                  {'name', atom() | string()} |
                   {'nodes', list()}           |
                   {'tab_options', list()}     |
                   {'tab_vertex', atom()}      |
                   {'tab_edge', atom()}        |
                   {'tab_neighbour', atom()}].
 
-new(Type, Options) ->
-    case check_type(Type, protected, []) of
-	{_Access, Ts} ->
-            init(Ts, Options);
-	error ->
-	    erlang:error(badarg)
-    end.
-
-init(Types, Options) ->
+new(Options) ->
     Postfix = case proplists:get_value(name, Options) of
                   undefined ->
                       get_random_string(10, "abcdef01234567890");
@@ -141,7 +128,8 @@ init(Types, Options) ->
     end,
     ok = mnesia:wait_for_tables([V, E, N], ?TIMEOUT_LOAD_TABLES),
 
-    set_type(Types, #xl_digraph{vtab=V, etab=E, ntab=N}).
+    {_Access, Ts} = check_type(Options, protected, []),
+    set_type(Ts, #xl_digraph{vtab=V, etab=E, ntab=N}).
 
 %% generate a random string to be used in tables name
 -spec get_random_string(integer(), string() ) -> [].
@@ -161,17 +149,31 @@ get_random_string(Length, AllowedChars) ->
 %%
 %-spec check_type([d_type()], d_protection(), [{'cyclic', boolean()}]) ->
 %       	{d_protection(), [{'cyclic', boolean()}]}.
-
-check_type([acyclic|Ts], A, L) ->
-    check_type(Ts, A,[{cyclic,false} | L]);
-check_type([cyclic | Ts], A, L) ->
-    check_type(Ts, A, [{cyclic,true} | L]);
-check_type([protected | Ts], _, L) ->
-    check_type(Ts, protected, L);
-check_type([private | Ts], _, L) ->
-    check_type(Ts, private, L);
-check_type([], A, L) -> {A, L};
-check_type(_, _, _) -> error.
+check_type(Options, A, L) ->
+    A1 = case proplists:get_value(private, Options) of
+             true ->
+                 private;
+             _ ->
+                 A
+         end,
+    Access = case proplists:get_value(protected, Options) of
+                 true ->
+                     protected;
+                 _ ->
+                     A1
+             end,
+    Ts = case proplists:get_value(acyclic, Options) of
+             true ->
+                 [{cyclic, false} | L];
+             _ ->
+                 case proplists:get_value(cyclic, Options) of
+                     true ->
+                         [{cyclic, true} | L];
+                     _ ->
+                         L
+                 end
+         end,
+    {Access, Ts}.
 
 %%
 %% Set graph type
