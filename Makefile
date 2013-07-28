@@ -9,6 +9,10 @@ clean:
 test: all
 	./rebar skip_deps=true eunit
 	./rebar ct
+
+eunit:
+	./rebar skip_deps=true eunit suites=sdigraph,test_sdigraph
+
 docs:
 	./rebar skip_deps=true doc
 

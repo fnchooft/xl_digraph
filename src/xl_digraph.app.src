@@ -5,8 +5,7 @@
              mdigraph,
              mdigraph_utils,
              sdigraph,
-             so_digraph,
-             so_cache
+             so_digraph
 	    ]},
   {applications, [kernel, stdlib, mnesia]},
   {registered, [ ] },

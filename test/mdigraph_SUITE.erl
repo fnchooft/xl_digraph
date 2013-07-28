@@ -167,7 +167,7 @@ del_vertex(Config) ->
     Exp_V = mdigraph:no_vertices(MG),
     Exp_V = digraph:no_vertices(DG),
     %% delete two
-    Exp_v2 = Exp_V - 2,
+    Exp_V2 = Exp_V - 2,
     true = mdigraph:del_vertices(MG, ["E", "D"]),
     true = digraph:del_vertices(DG,  ["E", "D"]),
     Exp_V2 = mdigraph:no_vertices(MG),
