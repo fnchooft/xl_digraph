@@ -13,7 +13,7 @@
 -export([create/1, get/3, put/4, new/4, delete/3]).
 
 %%% helper API
-%-export([get/2, put/3, new/3, new/2, delete/2]).
+-export([get/2, put/3, new/3, new/2, delete/2]).
 -export([encode/1, encode/2, decode/1, decode/2]).
 
 %%% exported types
@@ -469,20 +469,20 @@ r_del(Mod, G, Id) ->
 %%%===================================================================
 %%% Helper APIs
 %%%===================================================================
-%% get(Core, Key) ->
-%%     get(Core, Key, []).
+get(Core, Key) ->
+    get(Core, Key, []).
 
-%% put(Core, Key, Value) ->
-%%     put(Core, Key, Value, []).
+put(Core, Key, Value) ->
+    put(Core, Key, Value, []).
 
-%% new(Core, Key, Value) ->
-%%     new(Core, Key, Value, []).
+new(Core, Key, Value) ->
+    new(Core, Key, Value, []).
 
-%% new(Core, Value) ->
-%%     new(Core, undefined, Value, []).
+new(Core, Value) ->
+    new(Core, [], Value, []).
 
-%% delete(Core, Key) ->
-%%     delete(Core, Key, []).
+delete(Core, Key) ->
+    delete(Core, Key, []).
 
 %%--------------------------------------------------------------------
 %% @doc Parse binary string between cascading links

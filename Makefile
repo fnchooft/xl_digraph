@@ -11,7 +11,7 @@ test: all
 	./rebar ct
 
 eunit:
-	./rebar skip_deps=true eunit suites=sdigraph,test_sdigraph
+	./rebar skip_deps=true eunit suites=so_digraph,test_so_digraph
 
 docs:
 	./rebar skip_deps=true doc

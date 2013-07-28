@@ -1,6 +1,6 @@
 {application, xl_digraph,
  [{description, "This is an extension of the core Erlang module 'digraph' from stdlib."},
-  {vsn, "1.2"},
+  {vsn, "1.2.1"},
   {modules, [
              mdigraph,
              mdigraph_utils,

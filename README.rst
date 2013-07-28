@@ -1,8 +1,7 @@
 About
 =====
 
-This is an Mnesia implementation of the core Erlang module 'digraph' from 
-stdlib.
+This is an extension of the core Erlang module 'digraph' from stdlib.
 
 Installation
 ============
