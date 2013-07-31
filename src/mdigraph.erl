@@ -73,6 +73,12 @@
 
 -define(TIMEOUT_LOAD_TABLES, 60000). % 1 minute.
 
+%%% for quick debug
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
+
 -spec new() -> mdigraph().
 
 new() -> new([]).
@@ -452,7 +458,7 @@ edges(G, V) ->
     Fun = fun()->
                   mnesia:select(G#mdigraph.ntab,
                                 [{{'_',{out, V},'$1'}, [], ['$1']},
-                                 {{{in, V}, '$1'}, [], ['$1']}])
+                                 {{'_', {in, V}, '$1'}, [], ['$1']}])
           end,
     {atomic, Result} = mnesia:transaction(Fun),
     Result.
@@ -603,7 +609,7 @@ do_del_edge(E, _V1, _V2, G) ->
 	mnesia:transaction(
 	  fun() ->
 		  A = mnesia:select(G#mdigraph.ntab,
-                                    [{{'$1','$2', E}, [], [{{'$1','$2', E}}]}],
+                                    [{{'$1','$2', E}, [], ['$_']}],
                                     write),
 		  lists:foreach(fun(R) -> mnesia:delete_object(R) end, A),
 		  [ER] = mnesia:read({G#mdigraph.etab, E}),
