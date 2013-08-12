@@ -27,6 +27,13 @@
 -endif.
 
 %%% definitions
+-define(separator, <<"/">>).
+-define(root, <<>>).
+%-define(base, '$_base').
+-define(fatal, fatal).
+-define(DFL_LINK, []).
+
+%%% types
 -type option() :: 'object'     |  % entity
                   'id'         |  % force return vertex id only
                   'link'       |  % operation on edge
@@ -42,17 +49,10 @@
 
 -record(core, {module = digraph :: module(),
                graph :: term(),
-%               vital_link = true :: boolean(),
+               link_data = ?DFL_LINK :: list(),
                home :: term()}).
 
 -opaque core() :: #core{}.
-
--define(separator, <<"/">>).
--define(root, <<>>).
-%-define(base, '$_base').
--define(fatal, fatal).
--define(DFL_LINK, []).
-
 
 %%%===================================================================
 %%% API
@@ -65,7 +65,7 @@
                {'module', module()} |
                {'config', list()}   |
                {'graph', term()}    |
-               {'vital_link', boolean()} |  % do not optimize early
+               {'link_data', list()} |  % default link data
                {'home', 'undefined' | binary() | list()}].
 
 create(Args) ->
@@ -84,8 +84,8 @@ create(Args) ->
         Loc ->
             {ok, Home} = take_home(Mod, Graph, undefined, Loc, true)
     end,
-%    Vital = proplists:get_value(vital_link, Args, true),
-    Core#core{module = Mod, graph = Graph, home = Home}.
+    Link = proplists:get_value(link_data, Args, ?DFL_LINK),
+    Core#core{module = Mod, graph = Graph, home = Home, link_data = Link}.
 
 %% do not create vertex more than 1 level
 take_home(Mod, Graph, Home, Path, Create) ->
@@ -340,26 +340,27 @@ iput(_, _, _, _, _, _) ->
 new(Core, home, Loc, Opt) ->
     put(Core, home, Loc, Opt);
 %% parse arguments
-new(#core{module = M, graph = G, home = H}, Key, Value, Options) ->
-    inew(M, G, H, Key, Value, parse_option(Options)).
+new(#core{module = M, graph = G, home = H, link_data = L},
+    Key, Value, Options) ->
+    inew(M, G, H, L, Key, Value, parse_option(Options)).
 
 %%---- internal functions for new API
 %%--- global creating operation
 %%-- create link, value of new link: {From, To}
 %% need generate id of link
-inew(M, G, H, undefined, Value, Opt) ->
-    inew(M, G, H, [], Value, Opt);
-inew(M, G, H, Key, Value, Link) when Link == link; Link == fatal_link ->
+inew(M, G, H, L, undefined, Value, Opt) ->
+    inew(M, G, H, L, [], Value, Opt);
+inew(M, G, H, _L, Key, Value, Link) when Link == link; Link == fatal_link ->
     Flags = if Link == fatal_link -> [?fatal]; true -> [] end,
     new_link(M, G, H, Key, Value, Flags);
 %%-- generate id and create new vertex
 %%-- create new vertex
-inew(Mod, G, undefined, Path, Value, object) ->
+inew(Mod, G, undefined, L, Path, Value, object) ->
     case last_of(Mod, G, undefined, Path) of
         {Base} ->  % warning: no check of existence here
             {ok, Mod:add_vertex(G, Base, Value)};
         {Base, Key} ->
-            inew(Mod, G, Base, [Key], Value, object);
+            inew(Mod, G, Base, L, [Key], Value, object);
         {_E, _F, _T, _V} ->  % object is existence
             {error, already_exists};
         false when Path == <<>>; Path == []; Path == undefined ->
@@ -369,17 +370,17 @@ inew(Mod, G, undefined, Path, Value, object) ->
             {error, badarg}
     end;
 %%-- create new vertex and link to current vertex
-inew(Mod, G, Loc, Path, Value, object) ->
+inew(Mod, G, Loc, L, Path, Value, object) ->
     NewV = Mod:add_vertex(G),
     NewV = Mod:add_vertex(G, NewV, Value),
-    case new_link_by_id(Mod, G, Loc, Path, NewV, ?DFL_LINK) of
+    case new_link_by_id(Mod, G, Loc, Path, NewV, L) of
         {error, _} = Err ->
             Mod:del_vertex(G, NewV),  % cleanup
             Err;
         _Ok ->
             {ok, NewV}
     end;
-inew(_, _, _, _, _, _) ->
+inew(_, _, _, _, _, _, _) ->
     {error, badarg}.
 
 %% warning: if key is existed, return error

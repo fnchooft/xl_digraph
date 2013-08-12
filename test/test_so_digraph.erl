@@ -213,6 +213,45 @@ helper_test() ->
     %% Name = so_digraph:short_name({from, Name}),
     %% Name = so_digraph:short_name(Name).
 
+fatal_link_test() ->
+    G1 = so_digraph:create([{link_data, [fatal]}]),
+    G2 = so_digraph:create([]),
+    so_digraph:new(G1, <<"a">>, a),
+    so_digraph:new(G1, <<"a/b">>, b),
+    so_digraph:new(G1, <<"a/b/c">>, c),
+    so_digraph:new(G1, <<"a/b/d">>, d),
+    so_digraph:new(G1, <<"a/b/c/e">>, e),
+    so_digraph:new(G2, <<"a">>, a),
+    so_digraph:new(G2, <<"a/b">>, b),
+    so_digraph:new(G2, <<"a/b/c">>, c),
+    so_digraph:new(G2, <<"a/b/d">>, d),
+    so_digraph:new(G2, <<"a/b/c/e">>, e),
+
+    ?assert({ok, 5} =:= so_digraph:get(G1, count)),
+    ?assert({ok, 4} =:= so_digraph:get(G1, count, link)),
+    ?assert({ok, 5} =:= so_digraph:get(G2, count)),
+    ?assert({ok, 4} =:= so_digraph:get(G2, count, link)),
+
+    {ok, E1} = so_digraph:get(G1, <<"a/b/c/e">>, id),
+    {ok, E2} = so_digraph:get(G2, <<"a/b/c/e">>, id),
+    so_digraph:delete(G1, <<"a/b/c">>),
+    ?assert({error, undefined} =:= so_digraph:get(G1, [E1])),
+    so_digraph:delete(G2, <<"a/b/c">>),
+    ?assert({ok, e} =:= so_digraph:get(G2, [E2])),
+    
+    {ok, B1} = so_digraph:get(G1, <<"a/b">>, id),
+    {ok, B2} = so_digraph:get(G2, <<"a/b">>, id),
+    so_digraph:delete(G1, <<"a">>),
+    ?assert({error, undefined} =:= so_digraph:get(G1, [B1])),
+    so_digraph:delete(G2, <<"a">>),
+    ?assert({ok, b} =:= so_digraph:get(G2, [B2])),
+
+    ?assert({ok, 0} =:= so_digraph:get(G1, count)),
+    ?assert({ok, 0} =:= so_digraph:get(G1, count, link)),
+    ?assert({ok, 3} =:= so_digraph:get(G2, count)),
+    ?debugVal(so_digraph:get(G2, count, link)),
+    ?assert({ok, 1} =:= so_digraph:get(G2, count, link)).
+    
 threading_test() ->
     G = so_digraph:create([{module, sdigraph}, {home, [root]}]),
     Pid = self(),
