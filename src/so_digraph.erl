@@ -31,7 +31,7 @@
 -define(root, <<>>).
 %-define(base, '$_base').
 -define(fatal, fatal).
--define(DFL_LINK, []).
+-define(DFL_LINK, [fatal]).
 
 %%% types
 -type option() :: 'object'     |  % entity
@@ -337,8 +337,13 @@ iput(_, _, _, _, _, _) ->
 %%---- new API
 -spec new(core(), key(), term(), opts()) -> output().
 %% new state object with new home location.
-new(Core, home, Loc, Opt) ->
-    put(Core, home, Loc, Opt);
+new(#core{module = M, graph = G, home = Home} = Core, home, Loc, _Opt) ->
+    case take_home(M, G, Home, Loc, true) of
+        {ok, NewHome} ->
+            {ok, updated, Core#core{home = NewHome}};
+        Error ->
+            Error
+    end;
 %% parse arguments
 new(#core{module = M, graph = G, home = H, link_data = L},
     Key, Value, Options) ->
