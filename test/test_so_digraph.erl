@@ -249,7 +249,6 @@ fatal_link_test() ->
     ?assert({ok, 0} =:= so_digraph:get(G1, count)),
     ?assert({ok, 0} =:= so_digraph:get(G1, count, link)),
     ?assert({ok, 3} =:= so_digraph:get(G2, count)),
-    ?debugVal(so_digraph:get(G2, count, link)),
     ?assert({ok, 1} =:= so_digraph:get(G2, count, link)).
     
 threading_test() ->

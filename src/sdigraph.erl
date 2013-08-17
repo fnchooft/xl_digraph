@@ -109,6 +109,9 @@ new_shared_tab(Name, Options) ->
     receive
         {'$_ets_ok', Tab} ->
             Tab
+    after
+        10000 ->  % 10s timeout
+            error(timeout)
     end.
 
 keeper_proc() ->
