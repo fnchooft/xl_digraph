@@ -32,7 +32,7 @@ init_test() ->
     ok = so_digraph:delete(G3, []).
     
 main_test() ->
-    G = so_digraph:create([{module, sdigraph}]),
+    G = so_digraph:create([{module, sdigraph}, {default_link, []}]),
     %%---- new test
     %%--- global access, without home
     {ok, X} = so_digraph:new(G, x),  % generate id
@@ -214,8 +214,8 @@ helper_test() ->
     %% Name = so_digraph:short_name(Name).
 
 fatal_link_test() ->
-    G1 = so_digraph:create([{link_data, [fatal]}]),
-    G2 = so_digraph:create([]),
+    G1 = so_digraph:create([{default_link, [fatal]}]),
+    G2 = so_digraph:create([{default_link, []}]),
     so_digraph:new(G1, <<"a">>, a),
     so_digraph:new(G1, <<"a/b">>, b),
     so_digraph:new(G1, <<"a/b/c">>, c),

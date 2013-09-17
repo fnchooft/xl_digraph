@@ -14,6 +14,8 @@
 
 %%% helper API
 -export([get/2, put/3, new/3, new/2, delete/2]).
+-export([try_get/3]). %, try_put/4]).
+%-export([link/3, link/4, unlink/2, unlink/3]).
 -export([encode/1, encode/2, decode/1, decode/2]).
 
 %%% exported types
@@ -49,7 +51,7 @@
 
 -record(core, {module = digraph :: module(),
                graph :: term(),
-               link_data = ?DFL_LINK :: list(),
+               default_link = ?DFL_LINK :: list(),
                home :: term()}).
 
 -opaque core() :: #core{}.
@@ -65,7 +67,7 @@
                {'module', module()} |
                {'config', list()}   |
                {'graph', term()}    |
-               {'link_data', list()} |  % default link data
+               {'default_link', list()} |  % default link data
                {'home', 'undefined' | binary() | list()}].
 
 create(Args) ->
@@ -84,8 +86,8 @@ create(Args) ->
         Loc ->
             {ok, Home} = take_home(Mod, Graph, undefined, Loc, true)
     end,
-    Link = proplists:get_value(link_data, Args, ?DFL_LINK),
-    Core#core{module = Mod, graph = Graph, home = Home, link_data = Link}.
+    Link = proplists:get_value(default_link, Args, ?DFL_LINK),
+    Core#core{module = Mod, graph = Graph, home = Home, default_link = Link}.
 
 %% do not create vertex more than 1 level
 take_home(Mod, Graph, Home, Path, Create) ->
@@ -267,8 +269,9 @@ last_of(Mod, Graph, Base, [ShortName | Rest]) ->
         false ->
             false
     end;
-last_of(_M, _G, _B, _Unknown) ->
-    false.
+%% @todo test improper_list
+last_of(M, G, B, Unknown) ->
+    last_of(M, G, B, [Unknown]).
 
 
 %%--------------------------------------------------------------------
@@ -345,19 +348,18 @@ new(#core{module = M, graph = G, home = Home} = Core, home, Loc, _Opt) ->
             Error
     end;
 %% parse arguments
-new(#core{module = M, graph = G, home = H, link_data = L},
+new(#core{module = M, graph = G, home = H, default_link = L},
     Key, Value, Options) ->
     inew(M, G, H, L, Key, Value, parse_option(Options)).
 
 %%---- internal functions for new API
-%%--- global creating operation
-%%-- create link, value of new link: {From, To}
-%% need generate id of link
+%% need generate id
 inew(M, G, H, L, undefined, Value, Opt) ->
     inew(M, G, H, L, [], Value, Opt);
-inew(M, G, H, _L, Key, Value, Link) when Link == link; Link == fatal_link ->
+%% link target with path
+inew(M, G, H, _L, Key, To, Link) when Link == link; Link == fatal_link ->
     Flags = if Link == fatal_link -> [?fatal]; true -> [] end,
-    new_link(M, G, H, Key, Value, Flags);
+    new_link(M, G, H, Key, To, Flags);
 %%-- generate id and create new vertex
 %%-- create new vertex
 inew(Mod, G, undefined, L, Path, Value, object) ->
@@ -385,6 +387,24 @@ inew(Mod, G, Loc, L, Path, Value, object) ->
         _Ok ->
             {ok, NewV}
     end;
+%%-- create new vertex and link to current vertex, no value
+inew(Mod, G, Loc, L, Path, Id, id) ->
+    case Mod:vertex(G, Id) of
+        false when Path =:= [] ->
+            {ok, Mod:add_vertex(G, Id)};
+        false ->
+            Id = Mod:add_vertex(G, Id),
+            case new_link_by_id(Mod, G, Loc, Path, Id, L) of
+                {error, _} = Err ->
+                    Mod:del_vertex(G, Id),  % cleanup
+                    Err;
+                _Ok ->
+                    {ok, Id}
+            end;
+        _Existed ->
+            {error, already_exists}
+    end;
+
 inew(_, _, _, _, _, _, _) ->
     {error, badarg}.
 
@@ -478,6 +498,14 @@ r_del(Mod, G, Id) ->
 get(Core, Key) ->
     get(Core, Key, []).
 
+try_get(Core, Key, Default) ->
+    case get(Core, Key, []) of
+        {ok, Value} ->
+            Value;
+        _ ->
+            Default
+    end.
+
 put(Core, Key, Value) ->
     put(Core, Key, Value, []).
 
@@ -523,3 +551,10 @@ decode(Path, Home) ->
             [Home | RelativePath]
     end.
 
+%%--------------------------------------------------------------------
+%% @doc Log
+%% 08/31/13 new action add id option.
+%% 09/17/13 Key can be other types than list and binary.
+%%          Add try_get helper function for default value.
+%% @end
+%%--------------------------------------------------------------------
