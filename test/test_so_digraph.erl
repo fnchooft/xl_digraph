@@ -266,3 +266,21 @@ threading_test() ->
         test_end ->
             ok
     end.
+
+sugar_test() ->
+    G = so_digraph:create([{module, sdigraph}, {home, root}]),
+    ?assert({ok, 0} == so_digraph:get(G, count)),
+    {ok, _} = so_digraph:new(G, a, 1),
+    ?assert({ok, 1} == so_digraph:get(G, a)),
+    ?assert(ok == so_digraph:delete(G, a)),
+    ?assert({error, undefined} == so_digraph:get(G, a)),
+    {ok, _, A} = so_digraph:new(G, home, new_home),
+    {ok, _} = so_digraph:new(A, b, 2),
+    ?assert({ok, 2} == so_digraph:get(A, b)),
+    ?assert({ok, 2} == so_digraph:get(A, count)),
+    ?assert({ok, 1} == so_digraph:get(G, count)),
+    ?assert({ok, 2} == so_digraph:get(G, [new_home, b])),
+    ?assert(ok == so_digraph:delete(A, b)),
+    ?assert({ok, 1} == so_digraph:get(A, count)).
+    
+    
