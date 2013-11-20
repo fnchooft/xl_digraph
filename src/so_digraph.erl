@@ -80,21 +80,23 @@ create(Args) ->
                 G ->
                     G
             end,
+    Link = proplists:get_value(default_link, Args, ?DFL_LINK),
     case proplists:get_value(home, Args) of
         undefined ->
             Home = Core#core.home;
         Loc ->
-            {ok, Home} = take_home(Mod, Graph, undefined, Loc, true)
+            {ok, Home} = take_home(Mod, Graph, Link, undefined, Loc, true)
     end,
-    Link = proplists:get_value(default_link, Args, ?DFL_LINK),
     Core#core{module = Mod, graph = Graph, home = Home, default_link = Link}.
 
 %% do not create vertex more than 1 level
-take_home(Mod, Graph, Home, Path, Create) ->
+take_home(Mod, Graph, Link, Home, Path, Create) ->
     case last_of(Mod, Graph, Home, Path) of
         {_E, _F, T, _V} ->
             {ok, T};
-        {T} when Create ->
+        {F, T} when Create ->  % Last key is not existed, create it on demand.
+            inew(Mod, Graph, Link, F, [T], [], object);
+        {T} when Create ->  % Root is not existed, create it on demand.
             case Mod:vertex(Graph, T) of
                 false ->
                     T = Mod:add_vertex(Graph, T);
@@ -281,8 +283,9 @@ last_of(M, G, B, Unknown) ->
 -spec put(core(), key(), term(), opts()) -> output().
 %% new relative location.
 %% notice: put function to change home does not check existence of new location.
-put(#core{module = M, graph = G, home = Home} = Core, home, Loc, _Opt) ->
-    case take_home(M, G, Home, Loc, false) of
+put(#core{module = M, graph = G, default_link = L, home = Home} = Core,
+    home, Loc, _Opt) ->
+    case take_home(M, G, L, Home, Loc, false) of
         {ok, NewHome} ->
             {ok, updated, Core#core{home = NewHome}};
         Error ->
@@ -340,8 +343,9 @@ iput(_, _, _, _, _, _) ->
 %%---- new API
 -spec new(core(), key(), term(), opts()) -> output().
 %% new state object with new home location.
-new(#core{module = M, graph = G, home = Home} = Core, home, Loc, _Opt) ->
-    case take_home(M, G, Home, Loc, true) of
+new(#core{module = M, graph = G, default_link = L, home = Home} = Core,
+    home, Loc, _Opt) ->
+    case take_home(M, G, L, Home, Loc, true) of
         {ok, NewHome} ->
             {ok, updated, Core#core{home = NewHome}};
         Error ->
@@ -350,24 +354,24 @@ new(#core{module = M, graph = G, home = Home} = Core, home, Loc, _Opt) ->
 %% parse arguments
 new(#core{module = M, graph = G, home = H, default_link = L},
     Key, Value, Options) ->
-    inew(M, G, H, L, Key, Value, parse_option(Options)).
+    inew(M, G, L, H, Key, Value, parse_option(Options)).
 
 %%---- internal functions for new API
 %% need generate id
-inew(M, G, H, L, undefined, Value, Opt) ->
-    inew(M, G, H, L, [], Value, Opt);
+inew(M, G, L, H, undefined, Value, Opt) ->
+    inew(M, G, L, H, [], Value, Opt);
 %% link target with path
-inew(M, G, H, _L, Key, To, Link) when Link == link; Link == fatal_link ->
+inew(M, G, _L, H, Key, To, Link) when Link == link; Link == fatal_link ->
     Flags = if Link == fatal_link -> [?fatal]; true -> [] end,
     new_link(M, G, H, Key, To, Flags);
 %%-- generate id and create new vertex
 %%-- create new vertex
-inew(Mod, G, undefined, L, Path, Value, object) ->
+inew(Mod, G, L, undefined, Path, Value, object) ->
     case last_of(Mod, G, undefined, Path) of
         {Base} ->  % warning: no check of existence here
             {ok, Mod:add_vertex(G, Base, Value)};
         {Base, Key} ->
-            inew(Mod, G, Base, L, [Key], Value, object);
+            inew(Mod, G, L, Base, [Key], Value, object);
         {_E, _F, _T, _V} ->  % object is existence
             {error, already_exists};
         false when Path == <<>>; Path == []; Path == undefined ->
@@ -377,7 +381,7 @@ inew(Mod, G, undefined, L, Path, Value, object) ->
             {error, badarg}
     end;
 %%-- create new vertex and link to current vertex
-inew(Mod, G, Loc, L, Path, Value, object) ->
+inew(Mod, G, L, Loc, Path, Value, object) ->
     NewV = Mod:add_vertex(G),
     NewV = Mod:add_vertex(G, NewV, Value),
     case new_link_by_id(Mod, G, Loc, Path, NewV, L) of
@@ -388,7 +392,7 @@ inew(Mod, G, Loc, L, Path, Value, object) ->
             {ok, NewV}
     end;
 %%-- create new vertex and link to current vertex, no value
-inew(Mod, G, Loc, L, Path, Id, id) ->
+inew(Mod, G, L, Loc, Path, Id, id) ->
     case Mod:vertex(G, Id) of
         false when Path =:= [] ->
             {ok, Mod:add_vertex(G, Id)};
