@@ -141,10 +141,9 @@ new(Options) ->
 -spec get_random_string(integer(), string() ) -> [].
 get_random_string(Length, AllowedChars) ->
     %% set seed for random genarator
-    {A1, A2, A3} = timestamp(),
-    random:seed(A1, A2, A3),
+    %rand:seed(A1, A2, A3),
     lists:foldl(fun(_, Acc) ->
-                        [lists:nth(random:uniform(length(AllowedChars)),
+                        [lists:nth(rand:uniform(length(AllowedChars)),
                                    AllowedChars)]
                             ++ Acc
                 end, [], lists:seq(1, Length)).

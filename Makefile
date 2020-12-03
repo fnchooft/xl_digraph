@@ -1,20 +1,20 @@
 all: compile
 
 compile:
-	./rebar compile
+	rebar3 compile
 clean:
-	./rebar clean
+	rebar3 clean
 	rm -fr logs
 	rm -f test/*.beam
 test: all
-	./rebar skip_deps=true eunit
-	./rebar ct
+	rebar3 eunit
+	rebar3 ct
 
 eunit:
-	./rebar skip_deps=true eunit suites=so_digraph,test_so_digraph
+	rebar3 eunit suites=so_digraph,test_so_digraph
 
 docs:
-	./rebar skip_deps=true doc
+	rebar3 doc
 
 APPS = kernel stdlib sasl erts ssl tools os_mon runtime_tools crypto inets\
 xmerl snmp public_key mnesia eunit syntax_tools compiler eunit webtool
