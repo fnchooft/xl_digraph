@@ -1,6 +1,7 @@
+sudo: false
 language: erlang
+notifications:
+  email: false
 otp_release:
-  - "23.0.2"
-
-make test
+  - 22.0
 
