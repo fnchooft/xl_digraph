@@ -42,7 +42,7 @@ TODO: document differences
 Travis
 ------
 
-After a push to repo it should build.
+Trying to use Travis via travis.yml file.
 
 
 Copyright and License
