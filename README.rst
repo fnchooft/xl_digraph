@@ -38,6 +38,13 @@ modules documentation for a complete function list.
 
 TODO: document differences
 
+
+Travis
+------
+
+After a push to repo it should build.
+
+
 Copyright and License
 =====================
 
