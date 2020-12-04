@@ -1,7 +1,0 @@
-sudo: false
-language: erlang
-notifications:
-  email: true
-otp_release:
-  - "23.0.2"
-
